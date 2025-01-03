@@ -37,6 +37,13 @@ func New() *Engine {
 	return engine
 }
 
+// Default use Logger() & Recovery middlewares
+func Default() *Engine {
+	engine := New()
+	engine.Use(Logger(), Recovery())
+	return engine
+}
+
 // Group is defined to create a new RouterGroup
 // remember all groups share the same Engine instance
 func (group *RouterGroup) Group(prefix string) *RouterGroup {
@@ -54,6 +61,7 @@ func (group *RouterGroup) Group(prefix string) *RouterGroup {
 func (group *RouterGroup) Use(middlewares ...HandlerFunc) {
 	group.middlewares = append(group.middlewares, middlewares...)
 }
+
 func (group *RouterGroup) addRoute(method string, comp string, handler HandlerFunc) {
 	pattern := group.prefix + comp
 	log.Printf("Route %4s - %s", method, pattern)
@@ -86,7 +94,7 @@ func (group *RouterGroup) createStaticHandler(relativePath string, fs http.FileS
 	}
 }
 
-// Static serve static files
+// serve static files
 func (group *RouterGroup) Static(relativePath string, root string) {
 	handler := group.createStaticHandler(relativePath, http.Dir(root))
 	urlPattern := path.Join(relativePath, "/*filepath")
@@ -94,7 +102,7 @@ func (group *RouterGroup) Static(relativePath string, root string) {
 	group.GET(urlPattern, handler)
 }
 
-// SetFuncMap for custom render function
+// for custom render function
 func (engine *Engine) SetFuncMap(funcMap template.FuncMap) {
 	engine.funcMap = funcMap
 }
