@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"aee"
@@ -9,14 +8,19 @@ import (
 
 func main() {
 	r := aee.New()
-	r.GET("/", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "URL.Path = %q\n", req.URL.Path)
+	r.GET("/", func(c *aee.Context) {
+		c.HTML(http.StatusOK, "<h1>Hello Aee</h1>")
+	})
+	r.GET("/hello", func(c *aee.Context) {
+		// expect /hello?name=aliaxy
+		c.String(http.StatusOK, "hello %s, you're at %s\n", c.Query("name"), c.Path)
 	})
 
-	r.GET("/hello", func(w http.ResponseWriter, req *http.Request) {
-		for k, v := range req.Header {
-			fmt.Fprintf(w, "Header[%q] = %q\n", k, v)
-		}
+	r.POST("/login", func(c *aee.Context) {
+		c.JSON(http.StatusOK, aee.H{
+			"username": c.PostForm("username"),
+			"password": c.PostForm("password"),
+		})
 	})
 
 	r.Run(":9999")
