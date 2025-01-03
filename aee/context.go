@@ -21,6 +21,8 @@ type Context struct {
 	// middleware
 	handlers []HandlerFunc
 	index    int
+	// engine pointer
+	engine *Engine
 }
 
 func newContext(w http.ResponseWriter, req *http.Request) *Context {
@@ -31,6 +33,24 @@ func newContext(w http.ResponseWriter, req *http.Request) *Context {
 		Writer: w,
 		index:  -1,
 	}
+}
+
+func (c *Context) Next() {
+	c.index++
+	s := len(c.handlers)
+	for ; c.index < s; c.index++ {
+		c.handlers[c.index](c)
+	}
+}
+
+func (c *Context) Fail(code int, err string) {
+	c.index = len(c.handlers)
+	c.JSON(code, H{"message": err})
+}
+
+func (c *Context) Param(key string) string {
+	value, _ := c.Params[key]
+	return value
 }
 
 func (c *Context) PostForm(key string) string {
@@ -70,26 +90,12 @@ func (c *Context) Data(code int, data []byte) {
 	c.Writer.Write(data)
 }
 
-func (c *Context) HTML(code int, html string) {
+// HTML template render
+// refer https://golang.org/pkg/html/template/
+func (c *Context) HTML(code int, name string, data interface{}) {
 	c.SetHeader("Content-Type", "text/html")
 	c.Status(code)
-	c.Writer.Write([]byte(html))
-}
-
-func (c *Context) Param(key string) string {
-	value, _ := c.Params[key]
-	return value
-}
-
-func (c *Context) Next() {
-	c.index++
-	s := len(c.handlers)
-	for ; c.index < s; c.index++ {
-		c.handlers[c.index](c)
+	if err := c.engine.htmlTemplates.ExecuteTemplate(c.Writer, name, data); err != nil {
+		c.Fail(500, err.Error())
 	}
-}
-
-func (c *Context) Fail(code int, err string) {
-	c.index = len(c.handlers)
-	c.JSON(code, H{"message": err})
 }
