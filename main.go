@@ -1,40 +1,38 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"time"
 
 	"aee"
 )
 
+func onlyForV2() aee.HandlerFunc {
+	return func(c *aee.Context) {
+		// Start timer
+		t := time.Now()
+		// if a server error occurred
+		c.Fail(500, "Internal Server Error")
+		// Calculate resolution time
+		log.Printf("[%d] %s in %v for group v2", c.StatusCode, c.Req.RequestURI, time.Since(t))
+	}
+}
+
 func main() {
 	r := aee.New()
-	r.GET("/index", func(c *aee.Context) {
-		c.HTML(http.StatusOK, "<h1>Index Page</h1>")
+	r.Use(aee.Logger()) // global middleware
+	r.GET("/", func(c *aee.Context) {
+		c.HTML(http.StatusOK, "<h1>Hello Aee</h1>")
 	})
-	v1 := r.Group("/v1")
-	{
-		v1.GET("/", func(c *aee.Context) {
-			c.HTML(http.StatusOK, "<h1>Hello Aee</h1>")
-		})
 
-		v1.GET("/hello", func(c *aee.Context) {
-			// expect /hello?name=aliaxy
-			c.String(http.StatusOK, "hello %s, you're at %s\n", c.Query("name"), c.Path)
-		})
-	}
 	v2 := r.Group("/v2")
+	v2.Use(onlyForV2()) // v2 group middleware
 	{
 		v2.GET("/hello/:name", func(c *aee.Context) {
 			// expect /hello/aliaxy
 			c.String(http.StatusOK, "hello %s, you're at %s\n", c.Param("name"), c.Path)
 		})
-		v2.POST("/login", func(c *aee.Context) {
-			c.JSON(http.StatusOK, aee.H{
-				"username": c.PostForm("username"),
-				"password": c.PostForm("password"),
-			})
-		})
-
 	}
 
 	r.Run(":9999")
